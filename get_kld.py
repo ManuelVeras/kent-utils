@@ -72,7 +72,7 @@ def del_beta(kappa, beta):
   numerator = 8 * np.pi * np.exp(kappa) * beta
 
   # Calculate the denominator using the difference of squares pattern
-  denominator = (kappa - 2 * beta) * (kappa + 2 * beta) ** (3/2)
+  denominator = (kappa - 2 * beta)**(3/2) * (kappa + 2 * beta) ** (3/2)
 
   result = numerator / denominator
   return result
@@ -152,22 +152,14 @@ def kld(
     ca = c_approx(kappa_a, beta_a)
     cb = c_approx(kappa_b, beta_b)
 
-    #print(ca)
-    #print(cb)
-
     ExxT_a = ExxT(Q_matrix_a, kappa_a, beta_a)
-    ExxT_b = ExxT(Q_matrix_b, kappa_b, beta_b)
 
     Ex_a = E_x(Q_matrix_a, kappa_a, beta_a)
-    Ex_b = E_x(Q_matrix_b, kappa_b, beta_b)
 
     result = (
-        np.log(cb / ca) 
-        + (kappa_a * gamma_a1.T - kappa_b * gamma_b1.T) @ Ex_a 
-        + (beta_a * gamma_a2.T @ ExxT_a @ gamma_a2) 
-        - (beta_b * gamma_b2.T @ ExxT_b @ gamma_b2)
-        - (beta_a * gamma_a3.T @ ExxT_a @ gamma_a3) 
-        + (beta_b * gamma_b3.T @ ExxT_b @ gamma_b3)
+        np.log(cb / ca) + (kappa_a * gamma_a1.T - kappa_b * gamma_b1.T) @ Ex_a 
+        + (beta_a * gamma_a2.T @ ExxT_a @ gamma_a2) - (beta_b * gamma_b2.T @ ExxT_a @ gamma_b2)
+        - (beta_a * gamma_a3.T @ ExxT_a @ gamma_a3) + (beta_b * gamma_b3.T @ ExxT_a @ gamma_b3)
     )
 
     return result.item() 
@@ -186,13 +178,14 @@ def kld(
 if __name__ == "__main__":
     
     #first distribution
-    kappa_a = 2
-    beta_a = 0.7
-    Q_matrix_a = np.array([[1,0,0], [0,1,0],[0,0,1]])
+    kappa_a = 20
+    beta_a = 1
+    #Q_matrix_a = np.array([[1,0,0], [0,1,0],[0,0,1]])
+    Q_matrix_a = np.array([[np.sqrt(1/2), np.sqrt(1/2), 0], [-np.sqrt(1/2), np.sqrt(1/2), 0], [0, 0, 1]])
 
     #Second distribution
-    kappa_b = 2
-    beta_b = 0.1
+    kappa_b = 20
+    beta_b = 1
     Q_matrix_b = np.array([[1,0,0], [0,1,0],[0,0,1]])
 
     kld_value = kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b)
