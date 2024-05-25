@@ -2,19 +2,11 @@ import pdb
 import numpy as np
 
 def c_approx(kappa: float, beta: float) -> float:
-    """Corrected approximation for the normalization constant c(kappa, beta)."""
+    """Approximation for the normalization constant c(kappa, beta)."""
     return 2 * np.pi * np.exp(kappa) * ((kappa - 2 * beta) * (kappa + 2 * beta))**(-0.5)
 
 def del_kappa(kappa: float, beta: float) -> float:
-    """Calculates the first derivative wrt kappa.
-
-    Args:
-        kappa: A numerical value representing the variable kappa.
-        beta: A numerical value representing the variable beta.
-
-    Returns:
-        The calculated result of the expression.
-    """
+    """Calculates the first derivative wrt kappa."""
 
     # Handle potential division by zero
     if kappa - 2 * beta == 0 or kappa + 2 * beta == 0:
@@ -30,15 +22,7 @@ def del_kappa(kappa: float, beta: float) -> float:
     return result
 
 def del_2_kappa(kappa: float, beta: float) -> float:
-    """Calculates the second derivative wrt kappa.
-
-    Args:
-        kappa: A numerical value representing the variable kappa.
-        beta: A numerical value representing the variable beta.
-
-    Returns:
-        The calculated result of the expression.
-    """
+    """Calculates the second derivative wrt kappa."""
 
     # Handle potential division by zero
     if kappa - 2 * beta == 0 or kappa + 2 * beta == 0:
@@ -54,15 +38,7 @@ def del_2_kappa(kappa: float, beta: float) -> float:
     return result
 
 def del_beta(kappa, beta):
-  """Calculates the third npematical expression with inputs kappa and beta.
-
-  Args:
-      kappa: A numerical value representing the variable kappa.
-      beta: A numerical value representing the variable beta.
-
-  Returns:
-      The calculated result of the expression.
-  """
+  """Calculates the third npematical expression with inputs kappa and beta."""
 
   # Handle potential division by zero
   if kappa - 2 * beta == 0 or 2 * beta + kappa == 0:
@@ -78,36 +54,12 @@ def del_beta(kappa, beta):
   return result
 
 def E_x(Q_matrix: np.ndarray, kappa: float, beta: float) -> np.ndarray:
-    """Calculates the expected value of the elastic strain in the x-direction (E_x) for a transversely isotropic material.
 
-    This function uses the stiffness matrix (`Q_matrix`), the shape factor (`kappa`), and the fiber orientation angle (`beta`) to compute the expected value of E_x. It relies on the closed-form approximations for the compliance matrix (`c_approx`) and its derivative with respect to kappa (`del_kappa`).
-
-    Args:
-        Q_matrix: A 3x3 NumPy array representing the stiffness matrix of the transversely isotropic material.
-        kappa: The shape factor of the inclusion.
-        beta: The fiber orientation angle (in radians).
-
-    Returns:
-        A 1D NumPy array of length 3 representing the expected value of the elastic strain in the x-direction.
-    """
-
-    return del_kappa(kappa, beta) / c_approx(kappa, beta) * Q_matrix[0]
+    return del_kappa(kappa, beta) / c_approx(kappa, beta) * Q_matrix[:,0]
 
 def ExxT(
     Q_matrix: np.ndarray, kappa: float, beta: float
 ) -> np.ndarray:
-    """Calculates the expected value of the outer product of the elastic strain tensor (ExxT) for a transversely isotropic material.
-
-    This function uses the stiffness matrix (`Q_matrix`), the shape factor (`kappa`), and the fiber orientation angle (`beta`) to compute the expected value of ExxT. It leverages the closed-form approximations for the derivatives of the compliance matrix with respect to kappa and beta.
-
-    Args:
-        Q_matrix: A 3x3 NumPy array representing the stiffness matrix of the transversely isotropic material.
-        kappa: The shape factor of the inclusion.
-        beta: The fiber orientation angle (in radians).
-
-    Returns:
-        A 3x3 NumPy array representing the expected value of the outer product of the elastic strain tensor (ExxT).
-    """
     
     # Helper functions (presumably defined elsewhere) to calculate compliance matrix derivatives
     c = c_approx(kappa, beta)
@@ -156,6 +108,8 @@ def kld(
 
     Ex_a = E_x(Q_matrix_a, kappa_a, beta_a)
 
+    #pdb.set_trace()
+
     result = (
         np.log(cb / ca) + (kappa_a * gamma_a1.T - kappa_b * gamma_b1.T) @ Ex_a 
         + (beta_a * gamma_a2.T @ ExxT_a @ gamma_a2) - (beta_b * gamma_b2.T @ ExxT_a @ gamma_b2)
@@ -164,32 +118,37 @@ def kld(
 
     return result.item() 
 
+def check_orthonormality_and_beta(A, B, kappa_a, beta_a, kappa_b, beta_b):
 
-#TODO: conferir caso:
-''' kappa_a = 10
-    beta_a = 1
-    Q_matrix_a = np.array([[1,0,0], [0,1,0],[0,0,1]])
+    # Check beta condition
+    assert 0 < beta_a < kappa_a / 2, f"Beta condition not met: 0 < {beta_a} < {kappa_a/2} is False"
 
-    #Second distribution
-    kappa_b = 10
-    beta_b = 2
-    Q_matrix_b = np.array([[1,0,0], [0,1,0],[0,0,1]])'''
+    assert 0 < beta_b < kappa_b / 2, f"Beta condition not met: 0 < {beta_b} < {kappa_b/2} is False"
+
+
+    # Check orthonormality of A
+    identity = np.eye(3)
+    assert np.allclose(A.T @ A, identity), "Columns of A are not orthonormal"
+
+    # Check orthonormality of B
+    assert np.allclose(B.T @ B, identity), "Columns of B are not orthonormal"
 
 if __name__ == "__main__":
     
     #first distribution
-    kappa_a = 20
+    kappa_a = 10
     beta_a = 1
-    #Q_matrix_a = np.array([[1,0,0], [0,1,0],[0,0,1]])
-    Q_matrix_a = np.array([[np.sqrt(1/2), np.sqrt(1/2), 0], [-np.sqrt(1/2), np.sqrt(1/2), 0], [0, 0, 1]])
+    Q_matrix_a = np.array([[1,0,0], [0,1,0],[0,0,1]])
+    #Q_matrix_a = np.array([[np.sqrt(1/2), np.sqrt(1/2), 0], [-np.sqrt(1/2), np.sqrt(1/2), 0], [0, 0, 1]])
 
     #Second distribution
-    kappa_b = 20
-    beta_b = 1
+    kappa_b = 10
+    beta_b = 3
+
     Q_matrix_b = np.array([[1,0,0], [0,1,0],[0,0,1]])
+
+    check_orthonormality_and_beta(Q_matrix_a, Q_matrix_b, kappa_a, beta_a, kappa_b, beta_b)
 
     kld_value = kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b)
 
     print(f"KLD values is {kld_value}")
-
-    #pdb.set_trace()
