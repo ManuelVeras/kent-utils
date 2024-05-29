@@ -121,10 +121,9 @@ def kld(
 def check_orthonormality_and_beta(A, B, kappa_a, beta_a, kappa_b, beta_b):
 
     # Check beta condition
-    assert 0 < beta_a < kappa_a / 2, f"Beta condition not met: 0 < {beta_a} < {kappa_a/2} is False"
+    assert 0 <= beta_a < kappa_a / 2, f"Beta condition not met: 0 < {beta_a} < {kappa_a/2} is False"
 
-    assert 0 < beta_b < kappa_b / 2, f"Beta condition not met: 0 < {beta_b} < {kappa_b/2} is False"
-
+    assert 0 <= beta_b < kappa_b / 2, f"Beta condition not met: 0 < {beta_b} < {kappa_b/2} is False"
 
     # Check orthonormality of A
     identity = np.eye(3)
@@ -137,18 +136,21 @@ if __name__ == "__main__":
     
     #first distribution
     kappa_a = 10
-    beta_a = 1
+    beta_a = 2
     Q_matrix_a = np.array([[1,0,0], [0,1,0],[0,0,1]])
-    #Q_matrix_a = np.array([[np.sqrt(1/2), np.sqrt(1/2), 0], [-np.sqrt(1/2), np.sqrt(1/2), 0], [0, 0, 1]])
+    #Q_matrix_a = np.array([[np.sqrt(1/2), np.sqrt(1/2), 0], [np.sqrt(1/2), -np.sqrt(1/2), 0], [0, 0, 1]])
 
     #Second distribution
     kappa_b = 10
-    beta_b = 3
+    beta_b = 2
 
-    Q_matrix_b = np.array([[1,0,0], [0,1,0],[0,0,1]])
+    Q_matrix_b = np.array([[-1,0,0], [0,-1,0],[0,0,-1]])
+    #Q_matrix_b = np.array([[0,0,-1], [0,1,0],[-1,0,0]])
+    #Q_matrix_b = np.array([[0,0,1], [0,1,0],[1,0,0]])
 
     check_orthonormality_and_beta(Q_matrix_a, Q_matrix_b, kappa_a, beta_a, kappa_b, beta_b)
 
     kld_value = kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b)
+    #kld_value = kld(kappa_b, beta_b, Q_matrix_b, kappa_a, beta_a, Q_matrix_a)
 
     print(f"KLD values is {kld_value}")
