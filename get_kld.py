@@ -1,6 +1,28 @@
 import pdb
 import numpy as np
 
+def angles2Q(alpha, beta, eta):
+    
+    gamma_1 = np.array([
+    [np.cos(alpha)],
+    [np.sin(alpha) * np.cos(eta)],
+    [np.sin(alpha) * np.sin(eta)]
+    ])
+
+    gamma_2 = np.array([
+    [-np.cos(beta) * np.sin(alpha)],
+    [np.cos(beta) * np.cos(alpha) * np.cos(eta) - np.sin(beta) * np.sin(eta)],
+    [np.cos(beta) * np.cos(alpha) * np.sin(eta) + np.sin(beta) * np.cos(eta)]
+    ])
+
+    gamma_3 = np.array([
+    [np.sin(beta) * np.sin(alpha)],
+    [-np.sin(beta) * np.cos(alpha) * np.cos(eta) - np.cos(beta) * np.sin(eta)],
+    [-np.sin(beta) * np.cos(alpha) * np.sin(eta) + np.cos(beta) * np.cos(eta)]
+    ])
+
+    return np.concatenate((gamma_1, gamma_2, gamma_3), axis =1)
+
 def c_approx(kappa: float, beta: float) -> float:
     """Approximation for the normalization constant c(kappa, beta)."""
     return 2 * np.pi * np.exp(kappa) * ((kappa - 2 * beta) * (kappa + 2 * beta))**(-0.5)
@@ -108,8 +130,6 @@ def kld(
 
     Ex_a = E_x(Q_matrix_a, kappa_a, beta_a)
 
-    #pdb.set_trace()
-
     result = (
         np.log(cb / ca) + (kappa_a * gamma_a1.T - kappa_b * gamma_b1.T) @ Ex_a 
         + (beta_a * gamma_a2.T @ ExxT_a @ gamma_a2) - (beta_b * gamma_b2.T @ ExxT_a @ gamma_b2)
@@ -134,19 +154,21 @@ def check_orthonormality_and_beta(A, B, kappa_a, beta_a, kappa_b, beta_b):
 
 if __name__ == "__main__":
     
-    #first distribution
+    #first distribution   
     kappa_a = 10
     beta_a = 2
-    Q_matrix_a = np.array([[1,0,0], [0,1,0],[0,0,1]])
+    Q_matrix_a = np.array([[1,0,0], [0,1,0], [0,0,1]])
     #Q_matrix_a = np.array([[np.sqrt(1/2), np.sqrt(1/2), 0], [np.sqrt(1/2), -np.sqrt(1/2), 0], [0, 0, 1]])
 
     #Second distribution
     kappa_b = 10
     beta_b = 2
 
-    Q_matrix_b = np.array([[-1,0,0], [0,-1,0],[0,0,-1]])
-    #Q_matrix_b = np.array([[0,0,-1], [0,1,0],[-1,0,0]])
-    #Q_matrix_b = np.array([[0,0,1], [0,1,0],[1,0,0]])
+    #Q_matrix_b = np.array([[-1,0,0], [0,-1,0], [0,0,-1]])
+    #Q_matrix_b = np.array([[0,0,-1], [0,1,0], [-1,0,0]])
+    #Q_matrix_b = np.array([[0,0,1], [0,1,0], [1,0,0]])
+    #Q_matrix_b = angles2Q(alpha = 90, beta = 90, eta = 90)
+    Q_matrix_b = angles2Q(alpha = -90, beta = -90, eta = -90)
 
     check_orthonormality_and_beta(Q_matrix_a, Q_matrix_b, kappa_a, beta_a, kappa_b, beta_b)
 

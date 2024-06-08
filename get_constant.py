@@ -51,8 +51,8 @@ def evaluate_constant(kappa, beta, max_iterations=1000):
     return results
 
 # Example usage with fixed kappa and beta
-kappa = 102
-beta = 26
+kappa = 10
+beta = 3
 results = evaluate_constant(kappa, beta)
 
 # Print results in a table
