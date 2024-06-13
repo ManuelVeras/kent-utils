@@ -3,9 +3,8 @@ from numpy.random import seed, uniform, randint
 import warnings
 import sys
 import json 
-
+import pdb
 from matplotlib import pyplot as plt
-from pdb import set_trace as pause
 
 from skimage.io import imread
 
@@ -63,7 +62,6 @@ def selectAnnotation(annotations, class_name=None):
 def sampleFromAnnotation(annotation, shape):
 	h, w = shape
 	data_x, data_y, _, _, data_fov_h, data_fov_v, label = annotation
-	#'''
 	phi00 = (data_x - w / 2.) * ((2. * pi) / w)
 	theta00 = -(data_y - h / 2.) * (pi / h)
 	a_lat = deg2rad(data_fov_v)
@@ -79,21 +77,6 @@ def sampleFromAnnotation(annotation, shape):
 	#print('.', (p[r]-p[0])	/(linalg.norm(p[r]-p[0]))) #  [1,0,0]
 	R = dot(Rotation.Ry(phi00), Rotation.Rx(theta00))
 	p = asarray([dot(R, (p[ij] / norm(p[ij]))) for ij in range(r * r)])
-
-	'''
-	teste1 = (p[1]-p[0])	/(linalg.norm(p[1]-p[0]))
-	teste2 = (p[r]-p[0])	/(linalg.norm(p[r]-p[0]))
-	phi_teste1 = arctan2(teste1[0], teste1[2])
-	theta_teste1 = arcsin(teste1[1])
-	u_teste1 = (phi_teste1 / (2 * pi) + 1. / 2.) * w
-	v_teste1 = h - (-theta_teste1 / pi + 1. / 2.) * h
-	print('-',projectEquirectangular2Sphere(vstack((u_teste1,v_teste1)).T, w, h))
-	phi_teste2 = arctan2(teste2[0], teste2[2])
-	theta_teste2 = arcsin(teste2[1])
-	u_teste2 = (phi_teste2 / (2 * pi) + 1. / 2.) * w
-	v_teste2 = h - (-theta_teste2 / pi + 1. / 2.) * h
-	print('-',projectEquirectangular2Sphere(vstack((u_teste2,v_teste2)).T, w, h))
-	'''
 
 	phi = asarray([arctan2(p[ij][0], p[ij][2]) for ij in range(r * r)])
 	theta = asarray([arcsin(p[ij][1]) for ij in range(r * r)])
@@ -111,8 +94,6 @@ def tlts_kent_me(xs, xbar):
   S = average(xs.reshape((lenxs, 3, 1))*xs.reshape((lenxs, 1, 3)), 0) # dispersion (or covariance) matrix around origin
   gamma1 = xbar/norm(xbar) # has unit length and is in the same direction and parallel to xbar
   theta, phi = KentDistribution.gamma1_to_spherical_coordinates(gamma1)
-
-  #pause()
   
   H = KentDistribution.create_matrix_H(theta, phi)
   Ht = KentDistribution.create_matrix_Ht(theta, phi)
@@ -157,34 +138,11 @@ if __name__ == '__main__':
 	print(theta, phi, psi, '?', beta)
 	xbar = asarray([cos(theta), sin(theta)*cos(phi), sin(theta)*sin(phi)])
 	print('->', xbar)
-	'''
-	kappa, beta, theta, phi, psi = 10, 0, data_theta, data_phi, 0
-	beta = deg2rad(data_fov_v)/deg2rad(data_fov_h)
-	#kappa = ?
-	print(beta, data_fov_v, data_fov_h)
 
-	k = kent(theta, phi, psi, kappa, beta) 
-	P = k.pdf(X)
-	
-	plt.figure()
-	plt.imshow(P.reshape(I.shape))
-	plt.imshow(C.reshape(I.shape), cmap='gray', alpha=.7)
-	X = sampleFromAnnotation(annotation, I.shape)	
-	plt.scatter(*projectSphere2Equirectangular(X,  I.shape[1], I.shape[0]), s=1,c='red')
-	plt.show()
-	#plotSphere(X, P)
-	#plotSphere(X, C)
-	'''
-
-	#'''
 	Xs = sampleFromAnnotation(annotation, I.shape)	
-	k = kent_me(Xs) #WARNING: 
-	#k = tlts_kent_me(Xs, xbar)
-	#k = kent_mle(Xs, warning=sys.stdout)
+	k = kent_me(Xs)
 	P = k.pdf(X, normalize=False)
 	print(k) # theta, phi, psi, kappa, beta
-
-	#pause()
 	
 	plt.figure()
 	plt.imshow(P.reshape(I.shape), cmap='Oranges')
@@ -192,7 +150,5 @@ if __name__ == '__main__':
 	plt.scatter(*projectSphere2Equirectangular(Xs,  I.shape[1], I.shape[0]), s=1,c='blue',alpha=.1)
 
 	plt.show()
-	#plt.savefig('result.png')
-	#'''
 	
 

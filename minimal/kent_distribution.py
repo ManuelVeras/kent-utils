@@ -157,9 +157,9 @@ class KentDistribution(object):
     self.kappa = float(kappa)
     self.beta = float(beta)
 
-    print(gamma1)
-    print(gamma2)
-    print(gamma3)
+    #print(gamma1)
+    #print(gamma2)
+    #print(gamma3)
     
     self.theta, self.phi, self.psi = KentDistribution.gammas_to_spherical_coordinates(self.gamma1, self.gamma2)
     

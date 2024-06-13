@@ -1,11 +1,10 @@
-from kent_distribution import *
+from minimal.kent_distribution import *
 from numpy.random import seed, uniform, randint	
 import warnings
 import sys
 import json 
-
+import pdb
 from matplotlib import pyplot as plt
-from pdb import set_trace as pause
 
 from skimage.io import imread
 
@@ -83,79 +82,39 @@ def sampleFromAnnotation(annotation, shape):
 	theta = asarray([arcsin(p[ij][1]) for ij in range(r * r)])
 	u = (phi / (2 * pi) + 1. / 2.) * w
 	v = h - (-theta / pi + 1. / 2.) * h
-	return projectEquirectangular2Sphere(vstack((u,v)).T, w, h)
-
-
-
-def tlts_kent_me(xs, xbar):
-	"""Generates and returns a KentDistribution based on a moment estimation."""
-	lenxs = len(xs)
-	#pause()
-	xbar = average(xs, 0) # average direction of samples from origin
-	S = average(xs.reshape((lenxs, 3, 1))*xs.reshape((lenxs, 1, 3)), 0) # dispersion (or covariance) matrix around origin
-	gamma1 = xbar/norm(xbar) # has unit length and is in the same direction and parallel to xbar
-	theta, phi = KentDistribution.gamma1_to_spherical_coordinates(gamma1)
-
-	H = KentDistribution.create_matrix_H(theta, phi)
-	Ht = KentDistribution.create_matrix_Ht(theta, phi)
-	B = MMul(Ht, MMul(S, H))
-	eigvals, eigvects = eig(B[1:,1:])
-	eigvals = real(eigvals)
-	if eigvals[0] < eigvals[1]:
-		eigvals[0], eigvals[1] = eigvals[1], eigvals[0]
-		eigvects = eigvects[:,::-1]
-	K = diag([1.0, 1.0, 1.0])
-	K[1:,1:] = eigvects
-  
-	G = MMul(H, K)
-	Gt = transpose(G)
-	T = MMul(Gt, MMul(S, G))
-  
-	r1 = norm(xbar)
-	t22, t33 = T[1, 1], T[2, 2]
-	r2 = t22 - t33
-  
-	# kappa and beta can be estimated but may not lie outside their permitted ranges
-	min_kappa = KentDistribution.minimum_value_for_kappa
-	kappa = max( min_kappa, 1.0/(2.0-2.0*r1-r2) + 1.0/(2.0-2.0*r1+r2)  )
-	beta  = 0.5*(1.0/(2.0-2.0*r1-r2) - 1.0/(2.0-2.0*r1+r2))
-
-
-	print(f'kappa, beta  = {kappa}, {beta}')
-  
-	return kent4(G, kappa, beta)  
+	return projectEquirectangular2Sphere(vstack((u,v)).T, w, h) 
 
 if __name__ == '__main__':
 
 	I = imread('7fB0x.jpg', as_gray=True)
 	X, C = createSphere(I)
 	with open('7fB0x.json') as file: A = json.load(file)
-	
-	annotation = selectAnnotation(A, 'chair')
-	data_x, data_y, _, _, data_fov_h, data_fov_v, label = annotation
-	
-	phi, theta = 2*pi*data_x/I.shape[1], pi*data_y/I.shape[0]
-	beta = deg2rad(data_fov_v)/deg2rad(data_fov_h)
-	
-	beta = deg2rad(tan(data_fov_v / 2))/deg2rad(tan(data_fov_h / 2))
-	psi = 0
-	xbar = asarray([cos(theta), sin(theta)*cos(phi), sin(theta)*sin(phi)])
 
-	Xs = sampleFromAnnotation(annotation, I.shape)	
-	k = kent_me(Xs) #WARNING: 
-	#k = tlts_kent_me(Xs, xbar)
-	#k = kent_mle(Xs, warning=sys.stdout)
-	P = k.pdf(X, normalize=False)
-	print(k) # theta, phi, psi, kappa, beta
-	
-	"""
-	plt.figure()
-	plt.imshow(P.reshape(I.shape), cmap='Oranges')
-	plt.imshow(C.reshape(I.shape), cmap='gray', alpha=.7)
-	plt.scatter(*projectSphere2Equirectangular(Xs,  I.shape[1], I.shape[0]), s=1,c='blue',alpha=.1)
+	for annotation in A['boxes']:
 
-	plt.show()
-	plt.savefig('result.png')
-	"""
+		annotation = selectAnnotation(A)#, 'fireplace')
+
+		#pdb.set_trace()
+		data_x, data_y, _, _, data_fov_h, data_fov_v, label = annotation
+		
+		phi, theta = 2*pi*data_x/I.shape[1], pi*data_y/I.shape[0]
+		beta = deg2rad(data_fov_v)/deg2rad(data_fov_h)
+		beta = deg2rad(tan(data_fov_v / 2))/deg2rad(tan(data_fov_h / 2))
+		psi = 0
+		#print(theta, phi, psi, '?', beta)
+		xbar = asarray([cos(theta), sin(theta)*cos(phi), sin(theta)*sin(phi)])
+
+		Xs = sampleFromAnnotation(annotation, I.shape)	
+		k = kent_me(Xs)
+		P = k.pdf(X, normalize=False)
+		print(k.theta, k.phi, k.psi, k.kappa, k.beta) # theta, phi, psi, kappa, beta
+		#pdb.set_trace()
+		
+		"""plt.figure()
+		plt.imshow(P.reshape(I.shape), cmap='Oranges')
+		plt.imshow(C.reshape(I.shape), cmap='gray', alpha=.7)
+		plt.scatter(*projectSphere2Equirectangular(Xs,  I.shape[1], I.shape[0]), s=1,c='blue',alpha=.1)
+
+		plt.show()"""
 	
 
