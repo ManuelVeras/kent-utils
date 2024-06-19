@@ -1,12 +1,12 @@
-from kent_distribution import *
+from minimal.kent_distribution import *
 from numpy.random import seed, uniform, randint	
 import warnings
 import sys
 import json 
 
 from matplotlib import pyplot as plt
-from pdb import set_trace as pause
 
+import pdb
 from skimage.io import imread
 
 class Rotation:
@@ -37,6 +37,7 @@ def projectSphere2Equirectangular(x, w, h):
 
 def createSphere(I):
 	h, w = I.shape #960, 1920
+	pdb.set_trace()
 	v, u = mgrid[0:h:1, 0:w:1]
 	#print(u.max(), v.max()) # u in [0,w), v in [0,h)]
 	X = projectEquirectangular2Sphere(vstack((u.reshape(-1),v.reshape(-1))).T, w, h)
@@ -65,17 +66,19 @@ def sampleFromAnnotation(annotation, shape):
 	data_x, data_y, _, _, data_fov_h, data_fov_v, label = annotation
 	phi00 = (data_x - w / 2.) * ((2. * pi) / w)
 	theta00 = -(data_y - h / 2.) * (pi / h)
+	
 	a_lat = deg2rad(data_fov_v)
 	a_long = deg2rad(data_fov_h)
+	
 	r = 11
 	d_lat = r / (2 * tan(a_lat / 2))
 	d_long = r / (2 * tan(a_long / 2))
+	
 	p = []
 	for i in range(-(r - 1) // 2, (r + 1) // 2):
 		for j in range(-(r - 1) // 2, (r + 1) // 2):
 			p += [asarray([i * d_lat / d_long, j, d_lat])]
-	#print('.', (p[1]-p[0])	/(linalg.norm(p[1]-p[0]))) #  [0,1,0]
-	#print('.', (p[r]-p[0])	/(linalg.norm(p[r]-p[0]))) #  [1,0,0]
+
 	R = dot(Rotation.Ry(phi00), Rotation.Rx(theta00))
 	p = asarray([dot(R, (p[ij] / norm(p[ij]))) for ij in range(r * r)])
 
@@ -116,10 +119,9 @@ def tlts_kent_me(xs, xbar):
 	r2 = t22 - t33
   
 	# kappa and beta can be estimated but may not lie outside their permitted ranges
-	min_kappa = KentDistribution.minimum_value_for_kappa
+	min_kappa = 1E-6
 	kappa = max( min_kappa, 1.0/(2.0-2.0*r1-r2) + 1.0/(2.0-2.0*r1+r2)  )
 	beta  = 0.5*(1.0/(2.0-2.0*r1-r2) - 1.0/(2.0-2.0*r1+r2))
-
 
 	print(f'kappa, beta  = {kappa}, {beta}')
   
@@ -134,18 +136,18 @@ if __name__ == '__main__':
 	annotation = selectAnnotation(A, 'chair')
 	data_x, data_y, _, _, data_fov_h, data_fov_v, label = annotation
 	
-	phi, theta = 2*pi*data_x/I.shape[1], pi*data_y/I.shape[0]
-	beta = deg2rad(data_fov_v)/deg2rad(data_fov_h)
+	#phi, theta = 2*pi*data_x/I.shape[1], pi*data_y/I.shape[0]
+	#beta = deg2rad(data_fov_v)/deg2rad(data_fov_h)
 	
-	beta = deg2rad(tan(data_fov_v / 2))/deg2rad(tan(data_fov_h / 2))
-	psi = 0
-	xbar = asarray([cos(theta), sin(theta)*cos(phi), sin(theta)*sin(phi)])
+	#beta = deg2rad(tan(data_fov_v / 2))/deg2rad(tan(data_fov_h / 2))
+	#psi = 0
+	#xbar = asarray([cos(theta), sin(theta)*cos(phi), sin(theta)*sin(phi)])
 
 	Xs = sampleFromAnnotation(annotation, I.shape)	
 	k = kent_me(Xs) #WARNING: 
 	#k = tlts_kent_me(Xs, xbar)
 	#k = kent_mle(Xs, warning=sys.stdout)
-	P = k.pdf(X, normalize=False)
+	#P = k.pdf(X, normalize=False)
 	print(k) # theta, phi, psi, kappa, beta
 	
 	"""

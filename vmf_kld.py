@@ -14,7 +14,7 @@ def objective_function(k_i, k_j, mu_j):
     """
 
     def A_d(k):
-        return I_(3/2, k) / I_(1/2, k)
+        return I_(0, k) / I_(1/2, k)
 
     def C_d(k):
         # You'll need to replace this with your actual cost function

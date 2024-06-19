@@ -59,7 +59,7 @@ def ExxT(Q_matrix, kappa, beta):
     lambda_matrix = torch.diag(torch.tensor([lambda_1, lambda_2, lambda_3]))  # Use torch.diag for efficiency
     return torch.matmul(Q_matrix, torch.matmul(lambda_matrix, Q_matrix.T))
 
-def kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b):
+def get_kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b):
     gamma_a1, gamma_a2, gamma_a3 = Q_matrix_a[:, 0], Q_matrix_a[:, 1], Q_matrix_a[:, 2]
     gamma_b1, gamma_b2, gamma_b3 = Q_matrix_b[:, 0], Q_matrix_b[:, 1], Q_matrix_b[:, 2]
 
@@ -78,7 +78,7 @@ def kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b):
         + (beta_b * torch.matmul(torch.matmul(gamma_b3.T, ExxT_a), gamma_b3))
     )
 
-    return result.item()
+    return result.sum()  # Ensure it returns a scalar value
 
 
 def check_orthonormality_and_beta(A, B, kappa_a, beta_a, kappa_b, beta_b):
@@ -89,22 +89,25 @@ def check_orthonormality_and_beta(A, B, kappa_a, beta_a, kappa_b, beta_b):
     assert torch.allclose(torch.matmul(A.T, A), identity), "Columns of A are not orthonormal"
     assert torch.allclose(torch.matmul(B.T, B), identity), "Columns of B are not orthonormal"
 
+def normalization_function(kld):
+    return 1 - 1 / (2 + torch.sqrt(kld))
+
+def loss(kld, tau, normalization_function):
+    normalized_kld = normalization_function(kld)
+    return 1 - 1 / (tau + normalized_kld)
+
 
 if __name__ == "__main__":
 
-    #First Distribution
+    # First Distribution
     kappa_a = 10.1
     beta_a = 2.1
-    Q_matrix_a = torch.tensor([[1,0,0], [0,1,0], [0,0,1]], dtype=torch.float32)
-    #Q_matrix_a = np.array([[np.sqrt(1/2), np.sqrt(1/2), 0], [np.sqrt(1/2), -np.sqrt(1/2), 0], [0, 0, 1]])
+    Q_matrix_a = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=torch.float32)
 
-    #Second distribution
+    # Second distribution
     kappa_b = 10.1
     beta_b = 4.2
-
-    #Q_matrix_b = angles2Q(alpha = -90, beta = -90, eta = -90)
-    Q_matrix_b = torch.tensor([[1,0,0], [0,1,0], [0,0,1]], dtype=torch.float32)
-
+    Q_matrix_b = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=torch.float32)
 
     # Ensure that the data is converted to PyTorch tensors
     kappa_a, beta_a = torch.tensor(kappa_a), torch.tensor(beta_a)
@@ -113,10 +116,18 @@ if __name__ == "__main__":
     kappa_a, beta_a = kappa_a.float(), beta_a.float()
     kappa_b, beta_b = kappa_b.float(), beta_b.float()
 
-
     Q_matrix_a, Q_matrix_b = torch.tensor(Q_matrix_a), torch.tensor(Q_matrix_b) 
-  
+
     check_orthonormality_and_beta(Q_matrix_a, Q_matrix_b, kappa_a, beta_a, kappa_b, beta_b)
 
-    kld_value = kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b)
-    print(f"KLD value is {kld_value}")
+    kld_value = get_kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b)
+    kld_value.requires_grad = True  # Ensure gradients are enabled
+
+    tau = 2
+    loss_value = loss(kld_value, tau, normalization_function)
+    print(f"KLD value is {kld_value}, loss is {loss_value}")
+
+    loss_value.backward()
+
+    # Print the gradients
+    print(f'Gradients: {kld_value.grad}')

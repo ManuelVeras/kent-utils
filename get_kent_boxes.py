@@ -1,4 +1,5 @@
 from minimal.kent_distribution import *
+import os
 from numpy.random import seed, uniform, randint	
 import warnings
 import sys
@@ -86,35 +87,45 @@ def sampleFromAnnotation(annotation, shape):
 
 if __name__ == '__main__':
 
+	#Using a constant image, since it is only relevant variable for us to get the annotations
 	I = imread('7fB0x.jpg', as_gray=True)
 	X, C = createSphere(I)
-	with open('7fB0x.json') as file: A = json.load(file)
 
-	for annotation in A['boxes']:
 
-		annotation = selectAnnotation(A)#, 'fireplace')
+	directory_path = "/home/mstveras/mmdetection-2.x/data/360INDOOR/annotations"
 
-		#pdb.set_trace()
-		data_x, data_y, _, _, data_fov_h, data_fov_v, label = annotation
-		
-		phi, theta = 2*pi*data_x/I.shape[1], pi*data_y/I.shape[0]
-		beta = deg2rad(data_fov_v)/deg2rad(data_fov_h)
-		beta = deg2rad(tan(data_fov_v / 2))/deg2rad(tan(data_fov_h / 2))
-		psi = 0
-		#print(theta, phi, psi, '?', beta)
-		xbar = asarray([cos(theta), sin(theta)*cos(phi), sin(theta)*sin(phi)])
+	for filename in os.listdir(directory_path):
+		if filename.endswith('.json'):
+			print(f"======={filename}=======")
+			file_path = os.path.join(directory_path, filename)
 
-		Xs = sampleFromAnnotation(annotation, I.shape)	
-		k = kent_me(Xs)
-		P = k.pdf(X, normalize=False)
-		print(k.theta, k.phi, k.psi, k.kappa, k.beta) # theta, phi, psi, kappa, beta
-		#pdb.set_trace()
-		
-		"""plt.figure()
-		plt.imshow(P.reshape(I.shape), cmap='Oranges')
-		plt.imshow(C.reshape(I.shape), cmap='gray', alpha=.7)
-		plt.scatter(*projectSphere2Equirectangular(Xs,  I.shape[1], I.shape[0]), s=1,c='blue',alpha=.1)
+			# Open and read the JSON file
+			with open(file_path, 'r') as json_file:
+				annotations = json.load(json_file)
 
-		plt.show()"""
-	
+		for box in annotations['boxes']:
+
+			box = selectAnnotation(annotations)#, 'fireplace')
+
+			data_x, data_y, _, _, data_fov_h, data_fov_v, label = box
+			
+			phi, theta = 2*pi*data_x/I.shape[1], pi*data_y/I.shape[0]
+			beta = deg2rad(data_fov_v)/deg2rad(data_fov_h)
+			beta = deg2rad(tan(data_fov_v / 2))/deg2rad(tan(data_fov_h / 2))
+			psi = 0
+			xbar = asarray([cos(theta), sin(theta)*cos(phi), sin(theta)*sin(phi)])
+
+			Xs = sampleFromAnnotation(box, I.shape)	
+			k = kent_me(Xs)
+			P = k.pdf(X, normalize=False)
+			print(k.theta, k.phi, k.psi, k.kappa, k.beta) # theta, phi, psi, kappa, beta
+			#pdb.set_trace()
+			
+			"""plt.figure()
+			plt.imshow(P.reshape(I.shape), cmap='Oranges')
+			plt.imshow(C.reshape(I.shape), cmap='gray', alpha=.7)
+			plt.scatter(*projectSphere2Equirectangular(Xs,  I.shape[1], I.shape[0]), s=1,c='blue',alpha=.1)
+
+			plt.show()"""
+
 
