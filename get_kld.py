@@ -1,5 +1,7 @@
 import pdb
 import numpy as np
+import json
+from numpy import rad2deg
 
 def angles2Q(alpha, beta, eta):
     
@@ -130,6 +132,10 @@ def kld(
 
     Ex_a = E_x(Q_matrix_a, kappa_a, beta_a)
 
+    #term2 = (kappa_a * gamma_a1.T - kappa_b * gamma_b1.T) @ Ex_a
+    #term3 =  (beta_a * gamma_a2.T @ ExxT_a @ gamma_a2)
+
+
     result = (
         np.log(cb / ca) + (kappa_a * gamma_a1.T - kappa_b * gamma_b1.T) @ Ex_a 
         + (beta_a * gamma_a2.T @ ExxT_a @ gamma_a2) - (beta_b * gamma_b2.T @ ExxT_a @ gamma_b2)
@@ -138,39 +144,57 @@ def kld(
 
     return result.item() 
 
-def check_orthonormality_and_beta(A, B, kappa_a, beta_a, kappa_b, beta_b):
+def check_orthonormality_and_beta(A, kappa, beta):
 
     # Check beta condition
-    assert 0 <= beta_a < kappa_a / 2, f"Beta condition not met: 0 < {beta_a} < {kappa_a/2} is False"
+    assert 0 <= beta < kappa / 2, f"Beta condition not met: 0 < {beta} < {kappa/2} is False"
 
-    assert 0 <= beta_b < kappa_b / 2, f"Beta condition not met: 0 < {beta_b} < {kappa_b/2} is False"
-
-    # Check orthonormality of A
+    # Check orthonormality of
     identity = np.eye(3)
     assert np.allclose(A.T @ A, identity), "Columns of A are not orthonormal"
 
-    # Check orthonormality of B
-    assert np.allclose(B.T @ B, identity), "Columns of B are not orthonormal"
-
 if __name__ == "__main__":
     
+    input_filename =  'datasets/360INDOOR/annotations/instances_val2017_transformed.json'
+
     #first distribution   
-    kappa_a = 10
-    beta_a = 2
-    Q_matrix_a = np.array([[1,0,0], [0,1,0], [0,0,1]])
+    #kappa_a = 10
+    #beta_a = 2
+    #Q_matrix_a = np.array([[1,0,0], [0,1,0], [0,0,1]])
     #Q_matrix_a = np.array([[np.sqrt(1/2), np.sqrt(1/2), 0], [np.sqrt(1/2), -np.sqrt(1/2), 0], [0, 0, 1]])
 
     #Second distribution
-    kappa_b = 10
-    beta_b = 2
-
-    #Q_matrix_b = np.array([[-1,0,0], [0,-1,0], [0,0,-1]])
+    # Q_matrix_b = np.array([[-1,0,0], [0,-1,0], [0,0,-1]])
     #Q_matrix_b = np.array([[0,0,-1], [0,1,0], [-1,0,0]])
     #Q_matrix_b = np.array([[0,0,1], [0,1,0], [1,0,0]])
     #Q_matrix_b = angles2Q(alpha = 90, beta = 90, eta = 90)
-    Q_matrix_b = angles2Q(alpha = -90, beta = -90, eta = -90)
 
-    check_orthonormality_and_beta(Q_matrix_a, Q_matrix_b, kappa_a, beta_a, kappa_b, beta_b)
+    #with open(input_filename, 'r') as file:
+    #    json_data = json.load(file)
+
+    # Process the annotations
+    #annotations = json_data['annotations']
+    #ann_example = annotations[0]['bbox']
+
+    #Q_matrix_b = angles2Q(alpha = -90, beta = -90, eta = -90)
+    #Q_matrix_b = angles2Q(alpha = rad2deg(ann_example[0]), beta = rad2deg(ann_example[1]), eta = rad2deg(ann_example[2]))
+
+    #kappa_b = ann_example[3]
+    #beta_b = ann_example[4]
+
+    #check_orthonormality_and_beta(Q_matrix_a, kappa_a, beta_a)
+
+
+    kappa_a = 2*10.1
+    beta_a = 4.1
+    phi, psi, eta = 20., 0., 0.
+    Q_matrix_a = angles2Q(phi, psi,eta)
+
+    # Second distribution
+    kappa_b = 10.1
+    beta_b = 4.1
+    phi_b, psi_b, eta_b = 0., 0., 0.
+    Q_matrix_b = angles2Q(phi_b, psi_b,eta_b)
 
     kld_value = kld(kappa_a, beta_a, Q_matrix_a, kappa_b, beta_b, Q_matrix_b)
     #kld_value = kld(kappa_b, beta_b, Q_matrix_b, kappa_a, beta_a, Q_matrix_a)

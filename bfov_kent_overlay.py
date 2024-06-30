@@ -176,9 +176,12 @@ if __name__ == "__main__":
     h, w = image.shape[:2]
     with open('/home/mstveras/360-indoor/annotations/7fB0x.json', 'r') as f:
         data = json.load(f)
+    
     boxes = data['boxes']
     classes = data['class']
+    
     color_map = {4: (0, 0, 255), 5: (0, 255, 0), 6: (255, 0, 0), 12: (255, 255, 0), 17: (0, 255, 255), 25: (255, 0, 255), 26: (128, 128, 0), 27: (0, 128, 128), 30: (128, 0, 128), 34: (128, 128, 128), 35: (64, 0, 0), 36: (0, 64, 0)}
+    
     for i in range(len(boxes)):
         box = boxes[i]
         u00, v00, _, _, a_lat1, a_long1, class_name = box
