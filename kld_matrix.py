@@ -1,4 +1,5 @@
 import torch
+import pdb
 
 def angles_to_Q(alpha: torch.Tensor, beta: torch.Tensor, eta: torch.Tensor) -> torch.Tensor:
     N = alpha.size(0)
@@ -72,28 +73,44 @@ def beta_gamma_exxt_gamma(beta: torch.Tensor, gamma: torch.Tensor, ExxT: torch.T
     result = torch.bmm(intermediate_result, gamma_unsqueezed_2).squeeze()  # Shape: (N,)
     return beta * result  # Shape: (N,)
 
-def compute_kld_terms(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tensor, gamma_a2: torch.Tensor, gamma_a3: torch.Tensor,
+def kld_matrix(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tensor, gamma_a2: torch.Tensor, gamma_a3: torch.Tensor,
                       kappa_b: torch.Tensor, beta_b: torch.Tensor, gamma_b1: torch.Tensor, gamma_b2: torch.Tensor, gamma_b3: torch.Tensor,
                       Ex_a: torch.Tensor, ExxT_a: torch.Tensor, c_a: torch.Tensor, c_b: torch.Tensor, c_ka: torch.Tensor) -> torch.Tensor:
     
-    log_term = torch.log(c_b.unsqueeze(0) / c_a.unsqueeze(1))  # Shape: (N, M)
-    kappa_a_term = kappa_a.unsqueeze(1).unsqueeze(2) * gamma_a1.unsqueeze(1)  # Shape: (N, 1, 3)
-    kappa_b_term = kappa_b.unsqueeze(0).unsqueeze(2) * gamma_b1.unsqueeze(0)  # Shape: (1, M, 3)
-    diff_kappa_term = kappa_a_term - kappa_b_term  # Shape: (N, M, 3)
-    ex_a_term = torch.sum(diff_kappa_term * Ex_a.unsqueeze(1), dim=2)  # Shape: (N, M)
+    #pdb.set_trace()
+    #log_term = torch.log(c_b / c_a)  # Shape: (N,)
+    log_term = torch.log(c_b.view(-1, 1) / c_a.view(1, -1)) 
+    kappa_a_gamma_a1 = kappa_a.view(-1, 1) * gamma_a1  # Shape: (N, 3)
+    kappa_b_gamma_b1 = kappa_b.view(-1, 1) * gamma_b1  # Shape: (N, 3)
 
-    beta_a_term_1 = beta_gamma_exxt_gamma(beta_a.unsqueeze(1), gamma_a2.unsqueeze(1), ExxT_a.unsqueeze(1))  # Shape: (N, M)
-    beta_b_term_1 = beta_gamma_exxt_gamma(beta_b.unsqueeze(0), gamma_b2.unsqueeze(0), ExxT_a.unsqueeze(1))  # Shape: (N, M)
-    beta_a_term_2 = beta_gamma_exxt_gamma(beta_a.unsqueeze(1), gamma_a3.unsqueeze(1), ExxT_a.unsqueeze(1))  # Shape: (N, M)
-    beta_b_term_2 = beta_gamma_exxt_gamma(beta_b.unsqueeze(0), gamma_b3.unsqueeze(0), ExxT_a.unsqueeze(1))  # Shape: (N, M)
+    kappa_a_gamma_a1_expanded = kappa_a_gamma_a1.unsqueeze(1)  # Shape: [n_a, 1, 3]
+    kappa_b_gamma_b1_expanded = kappa_b_gamma_b1.unsqueeze(0)  # Shape: [1, n_b, 3]
+
+    # Compare with [i,i,:] of previous script (get_kld_torch)
+    diff_kappa_term = kappa_a_gamma_a1_expanded - kappa_b_gamma_b1_expanded  # Shape: [n_a, n_b, 3]
+    
+    Ex_a_expanded = Ex_a.unsqueeze(1)  # Shape: [n_a, 1, 3]
+
+    # Perform element-wise multiplication and sum along the last dimension
+    #the output tensor dot_products will have the shape [n_a, n_b],
+    #  where each element [i, j] is the result of the dot product between the corresponding vectors from diff_kappa_term and Ex_a.
+
+    ex_a_term = torch.sum(diff_kappa_term * Ex_a_expanded, dim=-1)
+
+    pdb.set_trace()
+
+    beta_a_term_1 = beta_gamma_exxt_gamma(beta_a, gamma_a2, ExxT_a)  # Shape: (N,)
+    beta_b_term_1 = beta_gamma_exxt_gamma(beta_b, gamma_b2, ExxT_a)  # Shape: (N,)
+    beta_a_term_2 = beta_gamma_exxt_gamma(beta_a, gamma_a3, ExxT_a)  # Shape: (N,)
+    beta_b_term_2 = beta_gamma_exxt_gamma(beta_b, gamma_b3, ExxT_a)  # Shape: (N,)
 
     kld = (
         log_term + ex_a_term + beta_a_term_1 - beta_b_term_1 - beta_a_term_2 + beta_b_term_2
-    )  # Shape: (N, M)
+    )  # Shape: (N,)
 
     return kld
 
-def get_pairwise_kld(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
+def get_kld(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
     kappa_a, beta_a, phi_a, psi_a, eta_a = kent_a[:, 0], kent_a[:, 1], kent_a[:, 2], kent_a[:, 3], kent_a[:, 4]
     Q_matrix_a = angles_to_Q(phi_a, psi_a, eta_a)
 
@@ -110,35 +127,37 @@ def get_pairwise_kld(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor
     ExxT_a = expected_xxT(kappa_a, beta_a, Q_matrix_a, c_a, c_ka)
     Ex_a = expected_x(gamma_a1, c_a, c_ka)
 
-    kld_matrix = compute_kld_terms(kappa_a, beta_a, gamma_a1, gamma_a2, gamma_a3,
-                                   kappa_b, beta_b, gamma_b1, gamma_b2, gamma_b3,
-                                   Ex_a, ExxT_a, c_a, c_b, c_ka)
-    return kld_matrix
+    kld = kld_matrix(kappa_a, beta_a, gamma_a1, gamma_a2, gamma_a3,
+                            kappa_b, beta_b, gamma_b1, gamma_b2, gamma_b3,
+                            Ex_a, ExxT_a, c_a, c_b, c_ka)
+    return kld
 
 def kent_loss(kld: torch.Tensor, const: float = 2.0) -> torch.Tensor:
     return 1 - 1 / (const + torch.sqrt(kld))
 
 def kent_iou(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
-    kld = get_pairwise_kld(kent_a, kent_b)
+    kld = get_kld(kent_a, kent_b)
     return 1 / (1 + torch.sqrt(kld))
 
 if __name__ == "__main__":
+
     kent_a1 = [20.2, 4.1, 0, 0, 0] 
     kent_a2 = [10.1, 4.1, 0, 0, 0]
     kent_a3 = [10.1, 4.1, 0, 0, 0]
-
-    kent_a = torch.tensor([kent_a1, kent_a2, kent_a3], dtype=torch.float32, requires_grad=True)
+    kent_a4 = [10.1, 4.1, 0, 0, 0]
+    
+    kent_a = torch.tensor([kent_a1, kent_a2, kent_a3, kent_a4], dtype=torch.float32, requires_grad=True)
 
     kent_b1 = [10.2, 4.1, 0, 0, 0] 
     kent_b2 = [20.1, 4.1, 0, 0, 0]
-    kent_b3 = [10.1, 4.1, 0, 0, 0]
+    kent_b3 = [30.1, 4.1, 0, 0, 0]
 
     kent_b = torch.tensor([kent_b1, kent_b2, kent_b3], dtype=torch.float32, requires_grad=True)
 
-    kld_matrix = get_pairwise_kld(kent_a, kent_b)
-    print(kld_matrix)
+    kld = get_kld(kent_a, kent_b)
+    print(kld)
     
-    # kld_matrix.sum().backward()
+    #kld.sum().backward()
 
-    # print("Gradients for kent_a:", kent_a.grad)
-    # print("Gradients for kent_b:", kent_b.grad)
+    #print("Gradients for kent_a:", kent_a.grad)
+    #print("Gradients for kent_b:", kent_b.grad)
