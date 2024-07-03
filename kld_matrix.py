@@ -98,24 +98,54 @@ def kld_matrix(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tens
     #ACREDITO QUE ESTEJA CORRETO ATE ESSE PONTO
 
     #ExxT_a is a 3x3 matrix for each kent
-    first = beta_a.view(-1, 1) * gamma_a2  # Shape: (n_a, 3)
-    second = ExxT_a  # Shape: (n_a, 3, 3)
-    
-    # Reshape `first` to be compatible for batch matrix multiplication
-    first_expanded = first.unsqueeze(1)  # Shape: (n_a, 1, 3)
-    
-    # Perform batch matrix multiplication
-    intermediate_result = torch.bmm(first_expanded, second)  # Shape: (n_a, 1, 3)
-    
-    # Multiply by gamma_a2 and sum to get the final scalar for each element
-    result = torch.bmm(intermediate_result, gamma_a2.unsqueeze(2)).squeeze()  # Shape: (n_a,)
-    
+
+    # Compute the next term: beta_a * gamma_a2.T * ExxT_a * gamma_a2
+    beta_a_gamma_a2 = beta_a.view(-1, 1) * gamma_a2  # Shape: (n_a, 3)
+    beta_a_gamma_a2_expanded = beta_a_gamma_a2.unsqueeze(1)  # Shape: (n_a, 1, 3)
+    intermediate_result_a2 = torch.bmm(beta_a_gamma_a2_expanded, ExxT_a)  # Shape: (n_a, 1, 3)
+    beta_a_term_1 = torch.bmm(intermediate_result_a2, gamma_a2.unsqueeze(2)).squeeze()  # Shape: (n_a, 1)
+
     pdb.set_trace()
+
+    # Expand beta_a_term_1 to match the shape [n_a, n_b]
+    beta_a_term_1_expanded = beta_a_term_1.unsqueeze(1).expand(-1, beta_b.size(0))  # Shape: (n_a, n_b)
+    #beta_a_term_1_expanded = beta_a_term_1.expand(-1, beta_b.size(0))  # Shape: (n_a, n_b)
+
+    # Compute the term: -beta_b * gamma_b2.T * ExxT_a * gamma_b2
+    beta_b_gamma_b2 = beta_b.view(-1, 1) * gamma_b2  # Shape: (n_b, 3)
+    beta_b_gamma_b2_expanded = beta_b_gamma_b2.unsqueeze(0)  # Shape: (1, n_b, 3)
+    intermediate_result_b2 = torch.bmm(beta_b_gamma_b2_expanded, ExxT_a.transpose(0, 1))  # Shape: (1, n_b, 3)
+    beta_b_term_2 = torch.bmm(intermediate_result_b2, gamma_b2.unsqueeze(2)).squeeze()  # Shape: (1, n_b)
+
+    # Expand beta_b_term_2 to match the shape [n_a, n_b]
+    beta_b_term_2_expanded = beta_b_term_2.expand(kappa_a.size(0), -1)  # Shape: (n_a, n_b)
+
+    # Compute the final term: beta_a_term_1_expanded - beta_b_term_2_expanded
+    beta_term = beta_a_term_1_expanded - beta_b_term_2_expanded  # Shape: (n_a, n_b)
+
+    # Repeat the process for gamma_a3 and gamma_b3
+    # Compute the term: -beta_a * gamma_a3.T * ExxT_a * gamma_a3
+    beta_a_gamma_a3 = beta_a.view(-1, 1) * gamma_a3  # Shape: (n_a, 3)
+    beta_a_gamma_a3_expanded = beta_a_gamma_a3.unsqueeze(1)  # Shape: (n_a, 1, 3)
+    intermediate_result_a3 = torch.bmm(beta_a_gamma_a3_expanded, ExxT_a)  # Shape: (n_a, 1, 3)
+    beta_a_term_3 = torch.bmm(intermediate_result_a3, gamma_a3.unsqueeze(2)).squeeze()  # Shape: (n_a, 1)
+
+    # Expand beta_a_term_3 to match the shape [n_a, n_b]
+    beta_a_term_3_expanded = beta_a_term_3.expand(-1, beta_b.size(0))  # Shape: (n_a, n_b)
+
+    # Compute the term: beta_b * gamma_b3.T * ExxT_a * gamma_b3
+    beta_b_gamma_b3 = beta_b.view(-1, 1) * gamma_b3  # Shape: (n_b, 3)
+    beta_b_gamma_b3_expanded = beta_b_gamma_b3.unsqueeze(0)  # Shape: (1, n_b, 3)
+    intermediate_result_b3 = torch.bmm(beta_b_gamma_b3_expanded, ExxT_a.transpose(0, 1))  # Shape: (1, n_b, 3)
+    beta_b_term_4 = torch.bmm(intermediate_result_b3, gamma_b3.unsqueeze(2)).squeeze()  # Shape: (1, n_b)
+
+    # Expand beta_b_term_4 to match the shape [n_a, n_b]
+    beta_b_term_4_expanded = beta_b_term_4.expand(kappa_a.size(0), -1)  # Shape: (n_a, n_b)
 
 
     kld = (
-        log_term + ex_a_term
-    )  # Shape: (N,)
+        log_term + ex_a_term + beta_term - beta_term_2
+    )  # Shape: (n_a, n_b)
 
     return kld
 
@@ -170,3 +200,4 @@ if __name__ == "__main__":
 
     #print("Gradients for kent_a:", kent_a.grad)
     #print("Gradients for kent_b:", kent_b.grad)
+
