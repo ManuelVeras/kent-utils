@@ -90,23 +90,25 @@ def kld_matrix(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tens
     kappa_a_gamma_a1_expanded = kappa_a_gamma_a1.unsqueeze(1)  # Shape: [n_a, 1, 3]
     kappa_b_gamma_b1_expanded = kappa_b_gamma_b1.unsqueeze(0)  # Shape: [1, n_b, 3]
 
-    # Compare with [i,i,:] of previous script (get_kld_torch)
-    diff_kappa_term = kappa_a_gamma_a1_expanded - kappa_b_gamma_b1_expanded  # Shape: [n_a, n_b, 3]
-    
+    diff_kappa_term = kappa_a_gamma_a1_expanded - kappa_b_gamma_b1_expanded  # Shape: [n_a, n_b, 3]    
     Ex_a_expanded = Ex_a.unsqueeze(1)  # Shape: [n_a, 1, 3]
     Ex_a_expanded = Ex_a_expanded.expand(-1, diff_kappa_term.size(1), -1)  # Shape: [n_a, n_b, 3]
-    
-    # Perform element-wise multiplication and sum along the last dimension
     ex_a_term = torch.sum(diff_kappa_term * Ex_a_expanded, dim=-1)  # Shape: [n_a, n_b]
 
     #ACREDITO QUE ESTEJA CORRETO ATE ESSE PONTO
-    # Perform element-wise multiplication and sum along the last dimension
-    #the output tensor dot_products will have the shape [n_a, n_b],
-    #  where each element [i, j] is the result of the dot product between the corresponding vectors from diff_kappa_term and Ex_a.
 
-    first = beta_a.view(-1, 1) * gamma_a2
-    second = ExxT_a
-    #third = torch.sum(first * second, dim=-1)
+    #ExxT_a is a 3x3 matrix for each kent
+    first = beta_a.view(-1, 1) * gamma_a2  # Shape: (n_a, 3)
+    second = ExxT_a  # Shape: (n_a, 3, 3)
+    
+    # Reshape `first` to be compatible for batch matrix multiplication
+    first_expanded = first.unsqueeze(1)  # Shape: (n_a, 1, 3)
+    
+    # Perform batch matrix multiplication
+    intermediate_result = torch.bmm(first_expanded, second)  # Shape: (n_a, 1, 3)
+    
+    # Multiply by gamma_a2 and sum to get the final scalar for each element
+    result = torch.bmm(intermediate_result, gamma_a2.unsqueeze(2)).squeeze()  # Shape: (n_a,)
     
     pdb.set_trace()
 
@@ -149,7 +151,7 @@ def kent_iou(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
 if __name__ == "__main__":
 
     kent_a1 = [20.2, 4.1, 20, 0, 0] 
-    kent_a2 = [10.1, 4.1, 0, 0, 0]
+    kent_a2 = [9.1, 4.1, 10, 0, 0]
     kent_a3 = [10.1, 4.1, 0, 0, 0]
     kent_a4 = [10.1, 4.1, 0, 0, 0]
     

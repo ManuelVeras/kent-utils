@@ -87,6 +87,7 @@ def compute_kld_terms(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: tor
     pdb.set_trace()
 
     beta_a_term_1 = beta_gamma_exxt_gamma(beta_a, gamma_a2, ExxT_a)  # Shape: (N,)
+    pdb.set_trace()
     beta_b_term_1 = beta_gamma_exxt_gamma(beta_b, gamma_b2, ExxT_a)  # Shape: (N,)
     beta_a_term_2 = beta_gamma_exxt_gamma(beta_a, gamma_a3, ExxT_a)  # Shape: (N,)
     beta_b_term_2 = beta_gamma_exxt_gamma(beta_b, gamma_b3, ExxT_a)  # Shape: (N,)
@@ -129,11 +130,12 @@ def kent_iou(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
 if __name__ == "__main__":
 
     kent_a1 = [20.2, 4.1, 20, 0, 0] 
-    kent_a2 = [10.1, 4.1, 0, 0, 0]
+    kent_a2 = [9.1, 4.1, 10, 0, 0]
     kent_a3 = [10.1, 4.1, 0, 0, 0]
     
     kent_a = torch.tensor([kent_a1, kent_a2, kent_a3], dtype=torch.float32, requires_grad=True)
 
+    #kent_b1 = [20.1, 4.1, 0, 0, 0]
     kent_b1 = [10.2, 4.1, 0, 0, 0] 
     kent_b2 = [20.1, 4.1, 0, 0, 0]
     kent_b3 = [30.1, 4.1, 0, 0, 0]
