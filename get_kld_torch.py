@@ -1,4 +1,5 @@
 import torch
+import pdb
 
 def angles_to_Q(alpha: torch.Tensor, beta: torch.Tensor, eta: torch.Tensor) -> torch.Tensor:
     N = alpha.size(0)
@@ -30,17 +31,17 @@ def angles_to_Q(alpha: torch.Tensor, beta: torch.Tensor, eta: torch.Tensor) -> t
 def c_approximation(kappa: torch.Tensor, beta: torch.Tensor) -> torch.Tensor:
     return 2 * torch.pi * torch.exp(kappa) * ((kappa - 2 * beta) * (kappa + 2 * beta))**(-0.5)
 
-def delta_kappa(kappa: torch.Tensor, beta: torch.Tensor) -> torch.Tensor:
+def del_kappa(kappa: torch.Tensor, beta: torch.Tensor) -> torch.Tensor:
     numerator = -2 * torch.pi * (4 * beta**2 + kappa - kappa**2) * torch.exp(kappa)
     denominator = (kappa - 2 * beta)**(3/2) * (kappa + 2 * beta)**(3/2)
     return numerator / denominator
 
-def delta_2_kappa(kappa: torch.Tensor, beta: torch.Tensor) -> torch.Tensor:
+def del_2_kappa(kappa: torch.Tensor, beta: torch.Tensor) -> torch.Tensor:
     numerator = 2 * torch.pi * (kappa**4 - 2 * kappa**3 + (2 - 8 * beta**2) * kappa**2 + 8 * beta**2 * kappa + 16 * beta**4 + 4 * beta**2) * torch.exp(kappa)
     denominator = (kappa - 2 * beta)**(5/2) * (kappa + 2 * beta)**(5/2)
     return numerator / denominator
 
-def delta_beta(kappa: torch.Tensor, beta: torch.Tensor) -> torch.Tensor:
+def del_beta(kappa: torch.Tensor, beta: torch.Tensor) -> torch.Tensor:
     numerator = 8 * torch.pi * torch.exp(kappa) * beta
     denominator = (kappa - 2 * beta)**(3/2) * (kappa + 2 * beta)**(3/2)
     return numerator / denominator
@@ -50,8 +51,8 @@ def expected_x(gamma_a1: torch.Tensor, c: torch.Tensor, c_k: torch.Tensor) -> to
     return const * gamma_a1
 
 def expected_xxT(kappa: torch.Tensor, beta: torch.Tensor, Q_matrix: torch.Tensor, c: torch.Tensor, c_k: torch.Tensor) -> torch.Tensor:
-    c_kk = delta_2_kappa(kappa, beta)
-    c_beta = delta_beta(kappa, beta)
+    c_kk = del_2_kappa(kappa, beta)
+    c_beta = del_beta(kappa, beta)
 
     lambda_1 = c_k / c
     lambda_2 = (c - c_kk + c_beta) / (2 * c)
@@ -68,6 +69,7 @@ def expected_xxT(kappa: torch.Tensor, beta: torch.Tensor, Q_matrix: torch.Tensor
 def beta_gamma_exxt_gamma(beta: torch.Tensor, gamma: torch.Tensor, ExxT: torch.Tensor) -> torch.Tensor:
     gamma_unsqueezed = gamma.unsqueeze(1)  # Shape: (N, 1, 3)
     intermediate_result = torch.bmm(gamma_unsqueezed, ExxT)  # Shape: (N, 1, 3)
+
     gamma_unsqueezed_2 = gamma.unsqueeze(2)  # Shape: (N, 3, 1)
     result = torch.bmm(intermediate_result, gamma_unsqueezed_2).squeeze()  # Shape: (N,)
     return beta * result  # Shape: (N,)
@@ -80,9 +82,9 @@ def compute_kld_terms(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: tor
     kappa_a_term = kappa_a.view(-1, 1) * gamma_a1  # Shape: (N, 3)
     kappa_b_term = kappa_b.view(-1, 1) * gamma_b1  # Shape: (N, 3)
     diff_kappa_term = kappa_a_term - kappa_b_term  # Shape: (N, 3)
-    import pdb
-    pdb.set_trace()
     ex_a_term = torch.sum(diff_kappa_term * Ex_a, dim=1)  # Shape: (N,)
+
+    pdb.set_trace()
 
     beta_a_term_1 = beta_gamma_exxt_gamma(beta_a, gamma_a2, ExxT_a)  # Shape: (N,)
     beta_b_term_1 = beta_gamma_exxt_gamma(beta_b, gamma_b2, ExxT_a)  # Shape: (N,)
@@ -107,7 +109,7 @@ def get_kld(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
 
     c_a = c_approximation(kappa_a, beta_a)
     c_b = c_approximation(kappa_b, beta_b)
-    c_ka = delta_kappa(kappa_a, beta_a)
+    c_ka = del_kappa(kappa_a, beta_a)
 
     ExxT_a = expected_xxT(kappa_a, beta_a, Q_matrix_a, c_a, c_ka)
     Ex_a = expected_x(gamma_a1, c_a, c_ka)
@@ -126,7 +128,7 @@ def kent_iou(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
 
 if __name__ == "__main__":
 
-    kent_a1 = [20.2, 4.1, 0, 0, 0] 
+    kent_a1 = [20.2, 4.1, 20, 0, 0] 
     kent_a2 = [10.1, 4.1, 0, 0, 0]
     kent_a3 = [10.1, 4.1, 0, 0, 0]
     

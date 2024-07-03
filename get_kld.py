@@ -185,13 +185,13 @@ if __name__ == "__main__":
     #check_orthonormality_and_beta(Q_matrix_a, kappa_a, beta_a)
 
 
-    kappa_a = 2*10.1
+    kappa_a = 10.1
     beta_a = 4.1
-    phi, psi, eta = 20., 0., 0.
+    phi, psi, eta = 0., 0., 0.
     Q_matrix_a = angles2Q(phi, psi,eta)
 
     # Second distribution
-    kappa_b = 10.1
+    kappa_b = 30.1
     beta_b = 4.1
     phi_b, psi_b, eta_b = 0., 0., 0.
     Q_matrix_b = angles2Q(phi_b, psi_b,eta_b)
