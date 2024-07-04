@@ -69,7 +69,7 @@ def expected_xxT(kappa: torch.Tensor, beta: torch.Tensor, Q_matrix: torch.Tensor
 def beta_gamma_exxt_gamma(beta: torch.Tensor, gamma: torch.Tensor, ExxT: torch.Tensor) -> torch.Tensor:
     gamma_unsqueezed = gamma.unsqueeze(1)  # Shape: (N, 1, 3)
     intermediate_result = torch.bmm(gamma_unsqueezed, ExxT)  # Shape: (N, 1, 3)
-
+    pdb.set_trace()
     gamma_unsqueezed_2 = gamma.unsqueeze(2)  # Shape: (N, 3, 1)
     result = torch.bmm(intermediate_result, gamma_unsqueezed_2).squeeze()  # Shape: (N,)
     return beta * result  # Shape: (N,)
@@ -84,11 +84,9 @@ def compute_kld_terms(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: tor
     diff_kappa_term = kappa_a_term - kappa_b_term  # Shape: (N, 3)
     ex_a_term = torch.sum(diff_kappa_term * Ex_a, dim=1)  # Shape: (N,)
 
-    pdb.set_trace()
-
     beta_a_term_1 = beta_gamma_exxt_gamma(beta_a, gamma_a2, ExxT_a)  # Shape: (N,)
-    pdb.set_trace()
     beta_b_term_1 = beta_gamma_exxt_gamma(beta_b, gamma_b2, ExxT_a)  # Shape: (N,)
+    
     beta_a_term_2 = beta_gamma_exxt_gamma(beta_a, gamma_a3, ExxT_a)  # Shape: (N,)
     beta_b_term_2 = beta_gamma_exxt_gamma(beta_b, gamma_b3, ExxT_a)  # Shape: (N,)
 
@@ -136,8 +134,8 @@ if __name__ == "__main__":
     kent_a = torch.tensor([kent_a1, kent_a2, kent_a3], dtype=torch.float32, requires_grad=True)
 
     #kent_b1 = [20.1, 4.1, 0, 0, 0]
-    kent_b1 = [10.2, 4.1, 0, 0, 0] 
-    kent_b2 = [20.1, 4.1, 0, 0, 0]
+    kent_b1 = [30.1, 4.1, 0, 0, 0] 
+    kent_b2 = [20.1, 4.1, 20, 0, 0]
     kent_b3 = [30.1, 4.1, 0, 0, 0]
 
     kent_b = torch.tensor([kent_b1, kent_b2, kent_b3], dtype=torch.float32, requires_grad=True)

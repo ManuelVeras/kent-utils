@@ -82,38 +82,35 @@ def kld_matrix(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tens
     # + beta_a * gamma_a2.T * ExxT_a * gamma_a2 - beta_b * gamma_b2.T * ExxT_a * gamma_b2
     # - beta_a * gamma_a3.T * ExxT_a * gamma_a3 + beta_b * gamma_b3.T * ExxT_a * gamma_b3
 
-    log_term = torch.log(c_b.view(-1, 1) / c_a.view(1, -1)) 
+    log_term = torch.log(c_b.view(-1, 1) / c_a.view(1, -1)).T 
     
     kappa_a_gamma_a1 = kappa_a.view(-1, 1) * gamma_a1  # Shape: (N, 3)
     kappa_b_gamma_b1 = kappa_b.view(-1, 1) * gamma_b1  # Shape: (N, 3)
-
     kappa_a_gamma_a1_expanded = kappa_a_gamma_a1.unsqueeze(1)  # Shape: [n_a, 1, 3]
     kappa_b_gamma_b1_expanded = kappa_b_gamma_b1.unsqueeze(0)  # Shape: [1, n_b, 3]
-
     diff_kappa_term = kappa_a_gamma_a1_expanded - kappa_b_gamma_b1_expanded  # Shape: [n_a, n_b, 3]    
     Ex_a_expanded = Ex_a.unsqueeze(1)  # Shape: [n_a, 1, 3]
     Ex_a_expanded = Ex_a_expanded.expand(-1, diff_kappa_term.size(1), -1)  # Shape: [n_a, n_b, 3]
     ex_a_term = torch.sum(diff_kappa_term * Ex_a_expanded, dim=-1)  # Shape: [n_a, n_b]
 
-    #ACREDITO QUE ESTEJA CORRETO ATE ESSE PONTO
-
-    #ExxT_a is a 3x3 matrix for each kent
-
     # Compute the next term: beta_a * gamma_a2.T * ExxT_a * gamma_a2
+    #um valor para cada distruibução de kent em a
     beta_a_gamma_a2 = beta_a.view(-1, 1) * gamma_a2  # Shape: (n_a, 3)
     beta_a_gamma_a2_expanded = beta_a_gamma_a2.unsqueeze(1)  # Shape: (n_a, 1, 3)
     intermediate_result_a2 = torch.bmm(beta_a_gamma_a2_expanded, ExxT_a)  # Shape: (n_a, 1, 3)
     beta_a_term_1 = torch.bmm(intermediate_result_a2, gamma_a2.unsqueeze(2)).squeeze()  # Shape: (n_a, 1)
-
-    pdb.set_trace()
-
-    # Expand beta_a_term_1 to match the shape [n_a, n_b]
     beta_a_term_1_expanded = beta_a_term_1.unsqueeze(1).expand(-1, beta_b.size(0))  # Shape: (n_a, n_b)
-    #beta_a_term_1_expanded = beta_a_term_1.expand(-1, beta_b.size(0))  # Shape: (n_a, n_b)
 
-    # Compute the term: -beta_b * gamma_b2.T * ExxT_a * gamma_b2
     beta_b_gamma_b2 = beta_b.view(-1, 1) * gamma_b2  # Shape: (n_b, 3)
+    #beta_b_gamma_b2 = gamma_b2 
     beta_b_gamma_b2_expanded = beta_b_gamma_b2.unsqueeze(0)  # Shape: (1, n_b, 3)
+    ExxT_a_expanded = ExxT_a.unsqueeze(1)  # Shape: (n_a, 1, 3, 3) 
+    product = beta_b_gamma_b2_expanded.unsqueeze(2) * ExxT_a_expanded  # Shape: (n_a, n_b, 3, 3)
+    result = product.sum(dim=-1)  # Shape: (n_a, n_b, 3)
+    
+    #ATÉ AQUI FUNFANDO!! EU ACHO!    
+    pdb.set_trace()
+    
     intermediate_result_b2 = torch.bmm(beta_b_gamma_b2_expanded, ExxT_a.transpose(0, 1))  # Shape: (1, n_b, 3)
     beta_b_term_2 = torch.bmm(intermediate_result_b2, gamma_b2.unsqueeze(2)).squeeze()  # Shape: (1, n_b)
 
@@ -188,7 +185,7 @@ if __name__ == "__main__":
     kent_a = torch.tensor([kent_a1, kent_a2, kent_a3, kent_a4], dtype=torch.float32, requires_grad=True)
 
     kent_b1 = [10.2, 4.1, 0, 0, 0] 
-    kent_b2 = [20.1, 4.1, 0, 0, 0]
+    kent_b2 = [20.1, 4.1, 20, 0, 0]
     kent_b3 = [30.1, 4.1, 0, 0, 0]
 
     kent_b = torch.tensor([kent_b1, kent_b2, kent_b3], dtype=torch.float32, requires_grad=True)
