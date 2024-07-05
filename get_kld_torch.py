@@ -84,10 +84,8 @@ def compute_kld_terms(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: tor
     ex_a_term = torch.sum(diff_kappa_term * Ex_a, dim=1)  # Shape: (N,)
 
     beta_a_term_1 = beta_gamma_exxt_gamma(beta_a, gamma_a2, ExxT_a)  # Shape: (N,)
-    beta_b_term_1 = beta_gamma_exxt_gamma(beta_b, gamma_b2, ExxT_a)  # Shape: (N,)
-
-    pdb.set_trace()
-    
+    #pdb.set_trace()
+    beta_b_term_1 = beta_gamma_exxt_gamma(beta_b, gamma_b2, ExxT_a)  # Shape: (N,)    
     beta_a_term_2 = beta_gamma_exxt_gamma(beta_a, gamma_a3, ExxT_a)  # Shape: (N,)
     beta_b_term_2 = beta_gamma_exxt_gamma(beta_b, gamma_b3, ExxT_a)  # Shape: (N,)
 
