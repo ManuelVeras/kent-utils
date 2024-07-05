@@ -93,7 +93,6 @@ def calculate_kappa_term(kappa_a, gamma_a1, kappa_b, gamma_b1, Ex_a):
     Ex_a_expanded = Ex_a.unsqueeze(1).expand(-1, diff_kappa_term.size(1), -1)
     return torch.sum(diff_kappa_term * Ex_a_expanded, dim=-1)
 
-# beta_term.py
 def calculate_beta_term(beta_a, gamma_a2, beta_b, gamma_b2, ExxT_a):
     """
     Calculate the beta term of the KLD matrix.
@@ -114,14 +113,12 @@ def calculate_beta_term(beta_a, gamma_a2, beta_b, gamma_b2, ExxT_a):
 
     return beta_a_term_1_expanded, beta_b_term_1
 
-# kld_calculation.py
 def calculate_kld(log_term, ex_a_term, beta_a_term_1_expanded, beta_b_term_1, beta_a_term_2_expanded, beta_b_term_2):
     """
     Calculate the final KLD matrix.
     """
     return log_term + ex_a_term + beta_a_term_1_expanded - beta_b_term_1 - beta_a_term_2_expanded + beta_b_term_2
 
-# kld_matrix.py
 def kld_matrix(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tensor, gamma_a2: torch.Tensor, gamma_a3: torch.Tensor,
                kappa_b: torch.Tensor, beta_b: torch.Tensor, gamma_b1: torch.Tensor, gamma_b2: torch.Tensor, gamma_b3: torch.Tensor,
                Ex_a: torch.Tensor, ExxT_a: torch.Tensor, c_a: torch.Tensor, c_b: torch.Tensor, c_ka: torch.Tensor) -> torch.Tensor:
@@ -133,7 +130,6 @@ def kld_matrix(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tens
     
     kld = calculate_kld(log_term, ex_a_term, beta_a_term_1_expanded, beta_b_term_1, beta_a_term_2_expanded, beta_b_term_2)
     return kld
-
 
 def get_kld(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
     kappa_a, beta_a, phi_a, psi_a, eta_a = kent_a[:, 0], kent_a[:, 1], kent_a[:, 2], kent_a[:, 3], kent_a[:, 4]
@@ -171,7 +167,7 @@ if __name__ == "__main__":
     kent_a3 = [10.1, 4.1, 0, 0, 0]
     kent_a4 = [10.1, 4.1, 0, 0, 0]
     
-    kent_a = torch.tensor([kent_a1, kent_a2, kent_a3, kent_a4], dtype=torch.float32, requires_grad=True)
+    kent_a = torch.tensor([kent_a1, kent_a2, kent_a3, kent_a4, kent_a4, kent_a4, kent_a4], dtype=torch.float32, requires_grad=True)
 
     kent_b1 = [30.1, 4.1, 0, 0, 0] 
     kent_b2 = [20.1, 4.1, 20, 0, 0]
@@ -182,8 +178,8 @@ if __name__ == "__main__":
     kld = get_kld(kent_a, kent_b)
     print(kld)
     
-    #kld.sum().backward()
+    kld.sum().backward()
 
-    #print("Gradients for kent_a:", kent_a.grad)
-    #print("Gradients for kent_b:", kent_b.grad)
+    print("Gradients for kent_a:", kent_a.grad)
+    print("Gradients for kent_b:", kent_b.grad)
 
