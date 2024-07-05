@@ -107,6 +107,13 @@ def kld_matrix(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tens
     ExxT_a_expanded = ExxT_a.unsqueeze(1)  # Shape: (n_a, 1, 3, 3) 
     product = beta_b_gamma_b2_expanded.unsqueeze(2) * ExxT_a_expanded  # Shape: (n_a, n_b, 3, 3)
     result = product.sum(dim=-1)  # Shape: (n_a, n_b, 3)
+        # Step 1: Expand beta_b2 to shape [1, n_b, 3]
+    gamma_b2_expanded = gamma_b2.unsqueeze(0)  # Shape: [1, n_b, 3]
+    # Step 2: Perform element-wise multiplication
+    multiplied_result = result * gamma_b2_expanded  # Shape: [n_a, n_b, 3]
+
+    # Step 3: Sum along the last dimension
+    final_result = torch.sum(multiplied_result, dim=-1) 
     
     #ATÉ AQUI FUNFANDO!! EU ACHO!    
     pdb.set_trace()
@@ -184,7 +191,7 @@ if __name__ == "__main__":
     
     kent_a = torch.tensor([kent_a1, kent_a2, kent_a3, kent_a4], dtype=torch.float32, requires_grad=True)
 
-    kent_b1 = [10.2, 4.1, 0, 0, 0] 
+    kent_b1 = [30.1, 4.1, 0, 0, 0] 
     kent_b2 = [20.1, 4.1, 20, 0, 0]
     kent_b3 = [30.1, 4.1, 0, 0, 0]
 
