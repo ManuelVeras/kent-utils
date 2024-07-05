@@ -46,7 +46,6 @@ def del_beta(kappa: torch.Tensor, beta: torch.Tensor) -> torch.Tensor:
     denominator = (kappa - 2 * beta)**(3/2) * (kappa + 2 * beta)**(3/2)
     return numerator / denominator
 
-#ONE FOR EACH KENT
 def expected_x(gamma_a1: torch.Tensor, c: torch.Tensor, c_k: torch.Tensor) -> torch.Tensor:
     const = (c_k / c).view(-1, 1)
     return const * gamma_a1
@@ -74,63 +73,67 @@ def beta_gamma_exxt_gamma(beta: torch.Tensor, gamma: torch.Tensor, ExxT: torch.T
     result = torch.bmm(intermediate_result, gamma_unsqueezed_2).squeeze()  # Shape: (N,)
     return beta * result  # Shape: (N,)
 
+# log_term.py
+def calculate_log_term(c_a, c_b):
+    """
+    Calculate the log term of the KLD matrix.
+    """
+    return torch.log(c_b.view(-1, 1) / c_a.view(1, -1)).T
+
+# kappa_term.py
+def calculate_kappa_term(kappa_a, gamma_a1, kappa_b, gamma_b1, Ex_a):
+    """
+    Calculate the kappa term of the KLD matrix.
+    """
+    kappa_a_gamma_a1 = kappa_a.view(-1, 1) * gamma_a1
+    kappa_b_gamma_b1 = kappa_b.view(-1, 1) * gamma_b1
+    kappa_a_gamma_a1_expanded = kappa_a_gamma_a1.unsqueeze(1)
+    kappa_b_gamma_b1_expanded = kappa_b_gamma_b1.unsqueeze(0)
+    diff_kappa_term = kappa_a_gamma_a1_expanded - kappa_b_gamma_b1_expanded
+    Ex_a_expanded = Ex_a.unsqueeze(1).expand(-1, diff_kappa_term.size(1), -1)
+    return torch.sum(diff_kappa_term * Ex_a_expanded, dim=-1)
+
+# beta_term.py
+def calculate_beta_term(beta_a, gamma_a2, beta_b, gamma_b2, ExxT_a):
+    """
+    Calculate the beta term of the KLD matrix.
+    """
+    beta_a_gamma_a2 = beta_a.view(-1, 1) * gamma_a2
+    beta_a_gamma_a2_expanded = beta_a_gamma_a2.unsqueeze(1)
+    intermediate_result_a2 = torch.bmm(beta_a_gamma_a2_expanded, ExxT_a)
+    beta_a_term_1 = torch.bmm(intermediate_result_a2, gamma_a2.unsqueeze(2)).squeeze()
+    beta_a_term_1_expanded = beta_a_term_1.unsqueeze(1).expand(-1, beta_b.size(0))
+
+    beta_b_gamma_b2 = beta_b.view(-1, 1) * gamma_b2
+    beta_b_gamma_b2_expanded = beta_b_gamma_b2.unsqueeze(0)
+    ExxT_a_expanded = ExxT_a.unsqueeze(1)
+    product = beta_b_gamma_b2_expanded.unsqueeze(2) * ExxT_a_expanded
+    result = product.sum(dim=-1)
+    gamma_b2_expanded = gamma_b2.unsqueeze(0)
+    beta_b_term_1 = torch.sum(result * gamma_b2_expanded, dim=-1)
+
+    return beta_a_term_1_expanded, beta_b_term_1
+
+# kld_calculation.py
+def calculate_kld(log_term, ex_a_term, beta_a_term_1_expanded, beta_b_term_1, beta_a_term_2_expanded, beta_b_term_2):
+    """
+    Calculate the final KLD matrix.
+    """
+    return log_term + ex_a_term + beta_a_term_1_expanded - beta_b_term_1 - beta_a_term_2_expanded + beta_b_term_2
+
+# kld_matrix.py
 def kld_matrix(kappa_a: torch.Tensor, beta_a: torch.Tensor, gamma_a1: torch.Tensor, gamma_a2: torch.Tensor, gamma_a3: torch.Tensor,
-                      kappa_b: torch.Tensor, beta_b: torch.Tensor, gamma_b1: torch.Tensor, gamma_b2: torch.Tensor, gamma_b3: torch.Tensor,
-                      Ex_a: torch.Tensor, ExxT_a: torch.Tensor, c_a: torch.Tensor, c_b: torch.Tensor, c_ka: torch.Tensor) -> torch.Tensor:
+               kappa_b: torch.Tensor, beta_b: torch.Tensor, gamma_b1: torch.Tensor, gamma_b2: torch.Tensor, gamma_b3: torch.Tensor,
+               Ex_a: torch.Tensor, ExxT_a: torch.Tensor, c_a: torch.Tensor, c_b: torch.Tensor, c_ka: torch.Tensor) -> torch.Tensor:
     
-    # log(c_b / c_a) + (kappa_a * gamma_a1.T - kappa_b * gamma_b1.T) * Ex_a
-    # + beta_a * gamma_a2.T * ExxT_a * gamma_a2 - beta_b * gamma_b2.T * ExxT_a * gamma_b2
-    # - beta_a * gamma_a3.T * ExxT_a * gamma_a3 + beta_b * gamma_b3.T * ExxT_a * gamma_b3
-
-    log_term = torch.log(c_b.view(-1, 1) / c_a.view(1, -1)).T 
+    log_term = calculate_log_term(c_a, c_b)
+    ex_a_term = calculate_kappa_term(kappa_a, gamma_a1, kappa_b, gamma_b1, Ex_a)
+    beta_a_term_1_expanded, beta_b_term_1 = calculate_beta_term(beta_a, gamma_a2, beta_b, gamma_b2, ExxT_a)
+    beta_a_term_2_expanded, beta_b_term_2 = calculate_beta_term(beta_a, gamma_a3, beta_b, gamma_b3, ExxT_a)
     
-    kappa_a_gamma_a1 = kappa_a.view(-1, 1) * gamma_a1  # Shape: (N, 3)
-    kappa_b_gamma_b1 = kappa_b.view(-1, 1) * gamma_b1  # Shape: (N, 3)
-    kappa_a_gamma_a1_expanded = kappa_a_gamma_a1.unsqueeze(1)  # Shape: [n_a, 1, 3]
-    kappa_b_gamma_b1_expanded = kappa_b_gamma_b1.unsqueeze(0)  # Shape: [1, n_b, 3]
-    diff_kappa_term = kappa_a_gamma_a1_expanded - kappa_b_gamma_b1_expanded  # Shape: [n_a, n_b, 3]    
-    Ex_a_expanded = Ex_a.unsqueeze(1)  # Shape: [n_a, 1, 3]
-    Ex_a_expanded = Ex_a_expanded.expand(-1, diff_kappa_term.size(1), -1)  # Shape: [n_a, n_b, 3]
-    ex_a_term = torch.sum(diff_kappa_term * Ex_a_expanded, dim=-1)  # Shape: [n_a, n_b]
-
-    beta_a_gamma_a2 = beta_a.view(-1, 1) * gamma_a2  # Shape: (n_a, 3)
-    beta_a_gamma_a2_expanded = beta_a_gamma_a2.unsqueeze(1)  # Shape: (n_a, 1, 3)
-    intermediate_result_a2 = torch.bmm(beta_a_gamma_a2_expanded, ExxT_a)  # Shape: (n_a, 1, 3)
-    beta_a_term_1 = torch.bmm(intermediate_result_a2, gamma_a2.unsqueeze(2)).squeeze()  # Shape: (n_a, 1)
-    beta_a_term_1_expanded = beta_a_term_1.unsqueeze(1).expand(-1, beta_b.size(0))  # Shape: (n_a, n_b)
-
-    #pdb.set_trace()
-
-    beta_b_gamma_b2 = beta_b.view(-1, 1) * gamma_b2  # Shape: (n_b, 3)
-    beta_b_gamma_b2_expanded = beta_b_gamma_b2.unsqueeze(0)  # Shape: (1, n_b, 3)
-    ExxT_a_expanded = ExxT_a.unsqueeze(1)  # Shape: (n_a, 1, 3, 3) 
-    product = beta_b_gamma_b2_expanded.unsqueeze(2) * ExxT_a_expanded  # Shape: (n_a, n_b, 3, 3)
-    result = product.sum(dim=-1)  # Shape: (n_a, n_b, 3)
-    gamma_b2_expanded = gamma_b2.unsqueeze(0)  # Shape: [1, n_b, 3]
-    multiplied_result = result * gamma_b2_expanded  # Shape: [n_a, n_b, 3]
-    beta_b_term_1 = torch.sum(multiplied_result, dim=-1)
-
-    beta_a_gamma_a3 = beta_a.view(-1, 1) * gamma_a3  # Shape: (n_a, 3)
-    beta_a_gamma_a3_expanded = beta_a_gamma_a3.unsqueeze(1)  # Shape: (n_a, 1, 3)
-    intermediate_result_a2 = torch.bmm(beta_a_gamma_a3_expanded, ExxT_a)  # Shape: (n_a, 1, 3)
-    beta_a_term_1 = torch.bmm(intermediate_result_a2, gamma_a3.unsqueeze(2)).squeeze()  # Shape: (n_a, 1)
-    beta_a_term_2_expanded = beta_a_term_1.unsqueeze(1).expand(-1, beta_b.size(0))  # Shape: (n_a, n_b)
-
-    beta_b_gamma_b3 = beta_b.view(-1, 1) * gamma_b3  # Shape: (n_b, 3)
-    beta_b_gamma_b3_expanded = beta_b_gamma_b3.unsqueeze(0)  # Shape: (1, n_b, 3)
-    ExxT_a_expanded = ExxT_a.unsqueeze(1)  # Shape: (n_a, 1, 3, 3) 
-    product = beta_b_gamma_b3_expanded.unsqueeze(2) * ExxT_a_expanded  # Shape: (n_a, n_b, 3, 3)
-    result = product.sum(dim=-1)  # Shape: (n_a, n_b, 3)
-    gamma_b3_expanded = gamma_b3.unsqueeze(0)  # Shape: [1, n_b, 3]
-    multiplied_result = result * gamma_b3_expanded  # Shape: [n_a, n_b, 3]
-    beta_b_term_2 = torch.sum(multiplied_result, dim=-1)
-
-
-    kld = (
-        log_term + ex_a_term + beta_a_term_1_expanded - beta_b_term_1 - beta_a_term_2_expanded + beta_b_term_2
-    )  # Shape: (n_a, n_b)
-
+    kld = calculate_kld(log_term, ex_a_term, beta_a_term_1_expanded, beta_b_term_1, beta_a_term_2_expanded, beta_b_term_2)
     return kld
+
 
 def get_kld(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
     kappa_a, beta_a, phi_a, psi_a, eta_a = kent_a[:, 0], kent_a[:, 1], kent_a[:, 2], kent_a[:, 3], kent_a[:, 4]
