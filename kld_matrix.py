@@ -153,8 +153,9 @@ def get_kld(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
                             Ex_a, ExxT_a, c_a, c_b, c_ka)
     return kld
 
-def kent_loss(kld: torch.Tensor, const: float = 2.0) -> torch.Tensor:
-    return 1 - 1 / (const + torch.sqrt(kld))
+def kent_loss(kent_a: torch.Tensor, kent_b: torch.Tensor, const: float = 2.0) -> torch.Tensor:
+    kld = get_kld(kent_a, kent_b)
+    return 1- 1 / (const + torch.sqrt(kld))
 
 def kent_iou(kent_a: torch.Tensor, kent_b: torch.Tensor) -> torch.Tensor:
     kld = get_kld(kent_a, kent_b)
@@ -175,10 +176,9 @@ if __name__ == "__main__":
 
     kent_b = torch.tensor([kent_b1, kent_b2, kent_b3], dtype=torch.float32, requires_grad=True)
 
-    kld = get_kld(kent_a, kent_b)
-    print(kld)
+    kent_loss = kent_loss(kent_a, kent_b)
     
-    kld.sum().backward()
+    kent_loss.sum().backward()
 
     print("Gradients for kent_a:", kent_a.grad)
     print("Gradients for kent_b:", kent_b.grad)
